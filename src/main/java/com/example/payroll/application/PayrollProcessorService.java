@@ -18,7 +18,6 @@ import com.example.payroll.domain.service.PayrollCalculator;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 public class PayrollProcessorService {
     private final PdfGeneratorPort pdfGenerator;
@@ -56,32 +55,45 @@ public class PayrollProcessorService {
             var discount = calculator.discountAmount(request);
             var net = calculator.netAmount(request);
             PdfDocument pdf = pdfGenerator.generate(request, gross, discount, net);
-            StoredFile stored = storagePort.store(pdf, request.tenantId(), request.employee().employeeId());
+            StoredFile stored = storagePort.store(pdf, request.companyId(), request.employeeId());
             PayrollDocument saved = repository.save(new PayrollDocument(
-                    request.requestId(), request.tenantId(), request.employee().employeeId(), pdf.fileName(), stored.storageKey(), stored.publicUrl(), gross, discount, net, PayrollProcessingStatus.COMPLETED, now));
-            PayrollGenerationResult result = new PayrollGenerationResult(saved.requestId(), saved.tenantId(), saved.employeeId(), saved.status(), saved.fileUrl(), "Payroll generated successfully", now);
-            publishSuccess(request.callbackTopic(), result);
+                    request.companyId(), request.employeeId(), request.requesterId(), request.month(), request.year(),
+                    pdf.fileName(), stored.storageKey(), stored.publicUrl(), gross, discount, net, PayrollProcessingStatus.COMPLETED, now));
+            PayrollGenerationResult result = new PayrollGenerationResult(
+                    saved.companyId(), saved.employeeId(), saved.requesterId(), saved.month(), saved.year(),
+                    saved.status(), saved.fileUrl(), "Payroll generated successfully", now);
+            publishSuccess(result);
             return result;
         } catch (RuntimeException ex) {
-            PayrollGenerationResult result = new PayrollGenerationResult(request.requestId(), request.tenantId(), request.employee().employeeId(), PayrollProcessingStatus.FAILED, null, "Payroll generation failed: " + ex.getMessage(), now);
-            publishFailure(request.callbackTopic(), result);
+            PayrollGenerationResult result = new PayrollGenerationResult(
+                    request.companyId(), request.employeeId(), request.requesterId(), request.month(), request.year(),
+                    PayrollProcessingStatus.FAILED, null, "Payroll generation failed: " + ex.getMessage(), now);
+            publishFailure(result);
             return result;
         }
     }
 
-    public Optional<PayrollDocument> findByRequestId(UUID requestId) {
-        return repository.findByRequestId(requestId);
+    public Optional<PayrollDocument> findByPayrollPeriod(String companyId, String employeeId, Integer month, Integer year) {
+        return repository.findByPayrollPeriod(companyId, employeeId, month, year);
     }
 
-    private void publishSuccess(String callbackTopic, PayrollGenerationResult result) {
-        resultPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, callbackTopic, mapper.toMessage(result));
-        notificationPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, PayrollTopology.NOTIFICATION_TOPIC,
-                mapper.toMessage(new PayrollNotification(result.requestId(), PayrollProcessingStatus.COMPLETED, "Payroll request finished successfully", result.processedAt())));
+    private void publishSuccess(PayrollGenerationResult result) {
+        resultPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, PayrollTopology.DEFAULT_RESULT_TOPIC, mapper.toMessage(result));
+        notificationPublisher.publish(
+                PayrollTopology.EXG_NAME_PAYROLL_GENERATION,
+                PayrollTopology.NOTIFICATION_TOPIC,
+                mapper.toMessage(new PayrollNotification(
+                        result.companyId(), result.employeeId(), result.requesterId(), result.month(), result.year(),
+                        PayrollProcessingStatus.COMPLETED, "Payroll request finished successfully", result.processedAt())));
     }
 
-    private void publishFailure(String callbackTopic, PayrollGenerationResult result) {
-        resultPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, callbackTopic, mapper.toMessage(result));
-        notificationPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, PayrollTopology.NOTIFICATION_TOPIC,
-                mapper.toMessage(new PayrollNotification(result.requestId(), PayrollProcessingStatus.FAILED, result.message(), result.processedAt())));
+    private void publishFailure(PayrollGenerationResult result) {
+        resultPublisher.publish(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, PayrollTopology.DEFAULT_RESULT_TOPIC, mapper.toMessage(result));
+        notificationPublisher.publish(
+                PayrollTopology.EXG_NAME_PAYROLL_GENERATION,
+                PayrollTopology.NOTIFICATION_TOPIC,
+                mapper.toMessage(new PayrollNotification(
+                        result.companyId(), result.employeeId(), result.requesterId(), result.month(), result.year(),
+                        PayrollProcessingStatus.FAILED, result.message(), result.processedAt())));
     }
 }

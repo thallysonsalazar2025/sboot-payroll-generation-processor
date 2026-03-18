@@ -3,10 +3,7 @@ package com.example.payroll.application;
 import com.example.payroll.application.dto.PayrollGenerationResultMessage;
 import com.example.payroll.application.dto.PayrollNotificationMessage;
 import com.example.payroll.application.mapper.PayrollMessageMapper;
-import com.example.payroll.domain.model.EmployeeSnapshot;
 import com.example.payroll.domain.model.PayrollGenerationRequest;
-import com.example.payroll.domain.model.PayrollItem;
-import com.example.payroll.domain.model.PayrollItemType;
 import com.example.payroll.domain.model.PayrollProcessingStatus;
 import com.example.payroll.domain.model.PdfDocument;
 import com.example.payroll.domain.model.StoredFile;
@@ -16,14 +13,9 @@ import com.example.payroll.domain.service.PayrollCalculator;
 import com.example.payroll.infrastructure.amqp.InMemoryTopicPublisher;
 import com.example.payroll.infrastructure.persistence.InMemoryPayrollDocumentRepository;
 import com.example.payroll.support.TestSupport;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.List;
-import java.util.UUID;
 
 public class PayrollProcessorServiceTest {
     public static void main(String[] args) {
@@ -42,16 +34,17 @@ public class PayrollProcessorServiceTest {
         var service = new PayrollProcessorService(pdfGenerator, storage, repository, resultPublisher, notificationPublisher,
                 new PayrollCalculator(), new PayrollMessageMapper(), Clock.fixed(Instant.parse("2026-03-18T10:15:30Z"), ZoneOffset.UTC));
 
-        var result = service.process(sampleRequest());
+        var request = sampleRequest();
+        var result = service.process(request);
 
         TestSupport.assertEquals(PayrollProcessingStatus.COMPLETED, result.status(), "status should be completed");
         TestSupport.assertEquals(1, repository.size(), "repository should store one document");
-        var saved = repository.findByRequestId(sampleRequest().requestId()).orElseThrow();
-        TestSupport.assertEquals(new BigDecimal("1250.00"), saved.grossAmount(), "gross amount");
-        TestSupport.assertEquals(new BigDecimal("150.00"), saved.discountAmount(), "discount amount");
-        TestSupport.assertEquals(new BigDecimal("1100.00"), saved.netAmount(), "net amount");
+        var saved = repository.findByPayrollPeriod(request.companyId(), request.employeeId(), request.month(), request.year()).orElseThrow();
+        TestSupport.assertEquals("0", saved.grossAmount().toPlainString(), "gross amount");
+        TestSupport.assertEquals("0", saved.discountAmount().toPlainString(), "discount amount");
+        TestSupport.assertEquals("0", saved.netAmount().toPlainString(), "net amount");
         TestSupport.assertEquals(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, resultPublisher.messages().getFirst().exchange(), "exchange");
-        TestSupport.assertEquals(sampleRequest().callbackTopic(), resultPublisher.messages().getFirst().topic(), "callback topic");
+        TestSupport.assertEquals(PayrollTopology.DEFAULT_RESULT_TOPIC, resultPublisher.messages().getFirst().topic(), "callback topic");
         TestSupport.assertEquals(PayrollTopology.NOTIFICATION_TOPIC, notificationPublisher.messages().getFirst().topic(), "notification topic");
     }
 
@@ -84,24 +77,14 @@ public class PayrollProcessorServiceTest {
         var request = sampleRequest();
         service.process(request);
 
-        var found = service.findByRequestId(request.requestId());
+        var found = service.findByPayrollPeriod(request.companyId(), request.employeeId(), request.month(), request.year());
 
         TestSupport.assertTrue(found.isPresent(), "document should be found");
-        TestSupport.assertEquals(request.requestId(), found.orElseThrow().requestId(), "request id");
+        TestSupport.assertEquals(request.month(), found.orElseThrow().month(), "month");
+        TestSupport.assertEquals(request.year(), found.orElseThrow().year(), "year");
     }
 
     static PayrollGenerationRequest sampleRequest() {
-        return new PayrollGenerationRequest(
-                UUID.fromString("13ef16ef-eab7-41cd-ac6d-e788a237cbec"),
-                "tenant-a",
-                new EmployeeSnapshot("emp-1", "Ana Silva", "12345678900", "ana@example.com"),
-                LocalDate.of(2026, 3, 1),
-                "BRL",
-                List.of(
-                        new PayrollItem("Salário", PayrollItemType.CREDIT, new BigDecimal("1000.00")),
-                        new PayrollItem("Bônus", PayrollItemType.CREDIT, new BigDecimal("250.00")),
-                        new PayrollItem("INSS", PayrollItemType.DEBIT, new BigDecimal("150.00"))),
-                OffsetDateTime.parse("2026-03-18T09:00:00Z"),
-                PayrollTopology.DEFAULT_RESULT_TOPIC);
+        return new PayrollGenerationRequest("emp-1", "company-a", "requester-9", 3, 2026);
     }
 }

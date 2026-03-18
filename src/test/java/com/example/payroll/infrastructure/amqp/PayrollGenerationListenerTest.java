@@ -1,8 +1,6 @@
 package com.example.payroll.infrastructure.amqp;
 
-import com.example.payroll.application.PayrollMessageMapperTest;
 import com.example.payroll.application.PayrollProcessorService;
-import com.example.payroll.application.PayrollProcessorServiceTest;
 import com.example.payroll.application.mapper.PayrollMessageMapper;
 import com.example.payroll.domain.service.PayrollCalculator;
 import com.example.payroll.infrastructure.persistence.InMemoryPayrollDocumentRepository;
@@ -32,6 +30,7 @@ public class PayrollGenerationListenerTest {
         listener.onMessage(sampleJson());
 
         TestSupport.assertEquals(1, repository.size(), "listener should process and persist one document");
+        TestSupport.assertTrue(repository.findByPayrollPeriod("company-a", "emp-1", 3, 2026).isPresent(), "document should be indexed by period");
     }
 
     static void shouldRejectInvalidPayload() {
@@ -42,22 +41,11 @@ public class PayrollGenerationListenerTest {
     static String sampleJson() {
         return """
                 {
-                  \"requestId\": \"13ef16ef-eab7-41cd-ac6d-e788a237cbec\",
-                  \"tenantId\": \"tenant-a\",
-                  \"employee\": {
-                    \"employeeId\": \"emp-1\",
-                    \"employeeName\": \"Ana Silva\",
-                    \"documentNumber\": \"12345678900\",
-                    \"email\": \"ana@example.com\"
-                  },
-                  \"payrollDate\": \"2026-03-01\",
-                  \"currency\": \"BRL\",
-                  \"items\": [
-                    {\"description\": \"Salário\", \"type\": \"CREDIT\", \"amount\": 1000.00},
-                    {\"description\": \"INSS\", \"type\": \"DEBIT\", \"amount\": 150.00}
-                  ],
-                  \"requestedAt\": \"2026-03-18T09:00:00Z\",
-                  \"callbackTopic\": \"payroll.generation.result\"
+                  \"employeeId\": \"emp-1\",
+                  \"companyId\": \"company-a\",
+                  \"requesterId\": \"requester-9\",
+                  \"month\": 3,
+                  \"year\": 2026
                 }
                 """;
     }

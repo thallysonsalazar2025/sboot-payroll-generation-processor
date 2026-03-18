@@ -4,17 +4,34 @@ info:
   version: 1.0.0
   description: Contrato para consulta do processamento assíncrono de geração de holerite.
 paths:
-  /api/v1/payroll-documents/{requestId}:
+  /api/v1/payroll-documents:
     get:
-      summary: Consulta o resultado da geração do holerite
+      summary: Consulta o resultado da geração do holerite por empresa, colaborador e período
       tags: [Payroll Documents]
       parameters:
-        - in: path
-          name: requestId
+        - in: query
+          name: companyId
           required: true
           schema:
             type: string
-            format: uuid
+        - in: query
+          name: employeeId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: month
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - in: query
+          name: year
+          required: true
+          schema:
+            type: integer
+            minimum: 1900
       responses:
         '200':
           description: Documento encontrado
@@ -23,20 +40,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/PayrollDocumentResponse'
         '404':
-          description: Solicitação não encontrada
+          description: Holerite não encontrado para o período informado
 components:
   schemas:
     PayrollDocumentResponse:
       type: object
-      required: [requestId, tenantId, employeeId, fileName, fileUrl, grossAmount, discountAmount, netAmount, status, processedAt]
+      required: [companyId, employeeId, requesterId, month, year, fileName, fileUrl, grossAmount, discountAmount, netAmount, status, processedAt]
       properties:
-        requestId:
-          type: string
-          format: uuid
-        tenantId:
+        companyId:
           type: string
         employeeId:
           type: string
+        requesterId:
+          type: string
+        month:
+          type: integer
+        year:
+          type: integer
         fileName:
           type: string
         fileUrl:

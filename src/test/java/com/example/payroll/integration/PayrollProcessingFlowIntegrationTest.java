@@ -14,7 +14,6 @@ import com.example.payroll.infrastructure.pdf.SimplePdfGeneratorAdapter;
 import com.example.payroll.infrastructure.storage.S3PayrollFileStorageAdapter;
 import com.example.payroll.support.TestSupport;
 import java.time.Clock;
-import java.util.UUID;
 
 public class PayrollProcessingFlowIntegrationTest {
     public static void main(String[] args) {
@@ -39,9 +38,8 @@ public class PayrollProcessingFlowIntegrationTest {
 
         listener.onMessage(sampleJson());
 
-        var requestId = UUID.fromString("13ef16ef-eab7-41cd-ac6d-e788a237cbec");
-        var document = repository.findByRequestId(requestId).orElseThrow();
-        TestSupport.assertEquals("tenant-a", document.tenantId(), "tenant should match");
+        var document = repository.findByPayrollPeriod("company-a", "emp-1", 3, 2026).orElseThrow();
+        TestSupport.assertEquals("company-a", document.companyId(), "company should match");
         TestSupport.assertEquals(PayrollTopology.EXG_NAME_PAYROLL_GENERATION, resultPublisher.messages().getFirst().exchange(), "result exchange");
         TestSupport.assertEquals(PayrollTopology.NOTIFICATION_TOPIC, notificationPublisher.messages().getFirst().topic(), "notification topic");
         TestSupport.assertTrue(document.fileUrl().contains("https://s3.amazonaws.com/payroll-generated-files"), "stored url should be s3 based");
@@ -50,23 +48,11 @@ public class PayrollProcessingFlowIntegrationTest {
     static String sampleJson() {
         return """
                 {
-                  \"requestId\": \"13ef16ef-eab7-41cd-ac6d-e788a237cbec\",
-                  \"tenantId\": \"tenant-a\",
-                  \"employee\": {
-                    \"employeeId\": \"emp-1\",
-                    \"employeeName\": \"Ana Silva\",
-                    \"documentNumber\": \"12345678900\",
-                    \"email\": \"ana@example.com\"
-                  },
-                  \"payrollDate\": \"2026-03-01\",
-                  \"currency\": \"BRL\",
-                  \"items\": [
-                    {\"description\": \"Salário\", \"type\": \"CREDIT\", \"amount\": 1000.00},
-                    {\"description\": \"Bônus\", \"type\": \"CREDIT\", \"amount\": 250.00},
-                    {\"description\": \"INSS\", \"type\": \"DEBIT\", \"amount\": 150.00}
-                  ],
-                  \"requestedAt\": \"2026-03-18T09:00:00Z\",
-                  \"callbackTopic\": \"payroll.generation.result\"
+                  \"employeeId\": \"emp-1\",
+                  \"companyId\": \"company-a\",
+                  \"requesterId\": \"requester-9\",
+                  \"month\": 3,
+                  \"year\": 2026
                 }
                 """;
     }

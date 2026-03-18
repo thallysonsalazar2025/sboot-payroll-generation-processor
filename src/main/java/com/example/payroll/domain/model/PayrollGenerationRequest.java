@@ -1,32 +1,25 @@
 package com.example.payroll.domain.model;
 
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 public record PayrollGenerationRequest(
-        UUID requestId,
-        String tenantId,
-        EmployeeSnapshot employee,
-        LocalDate payrollDate,
-        String currency,
-        List<PayrollItem> items,
-        OffsetDateTime requestedAt,
-        String callbackTopic
+        String employeeId,
+        String companyId,
+        String requesterId,
+        Integer month,
+        Integer year
 ) {
     public PayrollGenerationRequest {
-        Objects.requireNonNull(requestId);
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(employee);
-        Objects.requireNonNull(payrollDate);
-        Objects.requireNonNull(currency);
-        Objects.requireNonNull(items);
-        Objects.requireNonNull(requestedAt);
-        Objects.requireNonNull(callbackTopic);
-        if (items.isEmpty()) {
-            throw new IllegalArgumentException("items must not be empty");
+        Objects.requireNonNull(employeeId);
+        Objects.requireNonNull(companyId);
+        Objects.requireNonNull(requesterId);
+        Objects.requireNonNull(month);
+        Objects.requireNonNull(year);
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("month must be between 1 and 12");
+        }
+        if (year < 1900) {
+            throw new IllegalArgumentException("year must be greater than or equal to 1900");
         }
     }
 }

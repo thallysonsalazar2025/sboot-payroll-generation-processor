@@ -18,9 +18,9 @@ public class S3PayrollFileStorageAdapter implements FileStoragePort {
     }
 
     @Override
-    public StoredFile store(PdfDocument document, String tenantId, String employeeId) {
+    public StoredFile store(PdfDocument document, String companyId, String employeeId) {
         String safeFileName = document.fileName().replaceAll("[^a-zA-Z0-9._-]", "-");
-        String key = bucketName + "/" + tenantId + "/" + employeeId + "/" + LocalDate.now() + "/" + safeFileName;
+        String key = bucketName + "/" + companyId + "/" + employeeId + "/" + LocalDate.now() + "/" + safeFileName;
         uploadedObjects.put(key, document.content());
         return new StoredFile(key, publicBaseUrl + "/" + key);
     }
