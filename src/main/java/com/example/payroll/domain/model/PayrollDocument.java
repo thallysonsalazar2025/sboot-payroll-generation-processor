@@ -2,12 +2,13 @@ package com.example.payroll.domain.model;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 public record PayrollDocument(
-        UUID requestId,
-        String tenantId,
+        String companyId,
         String employeeId,
+        String requesterId,
+        Integer month,
+        Integer year,
         String fileName,
         String storageKey,
         String fileUrl,

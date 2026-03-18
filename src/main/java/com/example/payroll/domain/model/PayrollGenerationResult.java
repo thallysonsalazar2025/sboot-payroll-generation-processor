@@ -1,12 +1,13 @@
 package com.example.payroll.domain.model;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 public record PayrollGenerationResult(
-        UUID requestId,
-        String tenantId,
+        String companyId,
         String employeeId,
+        String requesterId,
+        Integer month,
+        Integer year,
         PayrollProcessingStatus status,
         String fileUrl,
         String message,

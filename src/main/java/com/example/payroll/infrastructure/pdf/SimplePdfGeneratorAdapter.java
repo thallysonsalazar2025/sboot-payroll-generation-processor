@@ -9,8 +9,9 @@ import java.nio.charset.StandardCharsets;
 public class SimplePdfGeneratorAdapter implements PdfGeneratorPort {
     @Override
     public PdfDocument generate(PayrollGenerationRequest request, BigDecimal grossAmount, BigDecimal discountAmount, BigDecimal netAmount) {
-        String body = "PAYSLIP|requestId=%s|employee=%s|gross=%s|discounts=%s|net=%s".formatted(
-                request.requestId(), request.employee().employeeName(), grossAmount, discountAmount, netAmount);
-        return new PdfDocument("payslip-" + request.requestId() + ".pdf", body.getBytes(StandardCharsets.UTF_8));
+        String period = "%04d-%02d".formatted(request.year(), request.month());
+        String body = "PAYSLIP|companyId=%s|employeeId=%s|requesterId=%s|period=%s|gross=%s|discounts=%s|net=%s".formatted(
+                request.companyId(), request.employeeId(), request.requesterId(), period, grossAmount, discountAmount, netAmount);
+        return new PdfDocument("payslip-%s-%s.pdf".formatted(request.employeeId(), period), body.getBytes(StandardCharsets.UTF_8));
     }
 }

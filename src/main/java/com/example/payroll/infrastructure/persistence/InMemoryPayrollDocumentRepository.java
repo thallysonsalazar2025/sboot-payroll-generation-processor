@@ -5,23 +5,26 @@ import com.example.payroll.domain.port.PayrollDocumentRepository;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 public class InMemoryPayrollDocumentRepository implements PayrollDocumentRepository {
-    private final Map<UUID, PayrollDocument> storage = new LinkedHashMap<>();
+    private final Map<String, PayrollDocument> storage = new LinkedHashMap<>();
 
     @Override
     public PayrollDocument save(PayrollDocument document) {
-        storage.put(document.requestId(), document);
+        storage.put(key(document.companyId(), document.employeeId(), document.month(), document.year()), document);
         return document;
     }
 
     @Override
-    public Optional<PayrollDocument> findByRequestId(UUID requestId) {
-        return Optional.ofNullable(storage.get(requestId));
+    public Optional<PayrollDocument> findByPayrollPeriod(String companyId, String employeeId, Integer month, Integer year) {
+        return Optional.ofNullable(storage.get(key(companyId, employeeId, month, year)));
     }
 
     public int size() {
         return storage.size();
+    }
+
+    private String key(String companyId, String employeeId, Integer month, Integer year) {
+        return companyId + ":" + employeeId + ":" + year + ":" + month;
     }
 }

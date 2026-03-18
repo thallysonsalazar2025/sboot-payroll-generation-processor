@@ -1,7 +1,15 @@
 package com.example.payroll.domain.model;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
-public record PayrollNotification(UUID requestId, PayrollProcessingStatus status, String detail, OffsetDateTime notifiedAt) {
+public record PayrollNotification(
+        String companyId,
+        String employeeId,
+        String requesterId,
+        Integer month,
+        Integer year,
+        PayrollProcessingStatus status,
+        String detail,
+        OffsetDateTime notifiedAt
+) {
 }
