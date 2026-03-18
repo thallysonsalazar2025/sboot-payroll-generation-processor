@@ -1,0 +1,56 @@
+openapi: 3.0.3
+info:
+  title: Payroll Generation Processor API
+  version: 1.0.0
+  description: Contrato para consulta do processamento assíncrono de geração de holerite.
+paths:
+  /api/v1/payroll-documents/{requestId}:
+    get:
+      summary: Consulta o resultado da geração do holerite
+      tags: [Payroll Documents]
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Documento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollDocumentResponse'
+        '404':
+          description: Solicitação não encontrada
+components:
+  schemas:
+    PayrollDocumentResponse:
+      type: object
+      required: [requestId, tenantId, employeeId, fileName, fileUrl, grossAmount, discountAmount, netAmount, status, processedAt]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        employeeId:
+          type: string
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+          format: uri
+        grossAmount:
+          type: number
+        discountAmount:
+          type: number
+        netAmount:
+          type: number
+        status:
+          type: string
+          enum: [RECEIVED, PROCESSING, COMPLETED, FAILED]
+        processedAt:
+          type: string
+          format: date-time
